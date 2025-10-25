@@ -1,0 +1,8 @@
+{
+  "crs": "Система координат",
+  "lang": "Язык",
+  "zwsLayer": "ZWS слой",
+  "wmsLayers": "WMS слои",
+  "error": "Ошибка",
+  "nothingFound": "Объект не найден"
+}
