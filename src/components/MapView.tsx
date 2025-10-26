@@ -1,4 +1,3 @@
-// src/components/MapView.tsx
 import { useMemo, useState } from 'react';
 import { MapContainer, TileLayer, WMSTileLayer, useMapEvents, Marker, Popup, GeoJSON } from 'react-leaflet';
 import L, { CRS } from 'leaflet';
@@ -25,7 +24,7 @@ export type FoundFeature = {
 	fid?: string;
 	latlng: L.LatLng;
 	props: Record<string, string>;
-	geojson?: any;
+	geojson?: unknown;
 };
 
 const ZWS_DEFAULT_LAYER = 'example:demo';
@@ -77,7 +76,7 @@ export default function MapView({
 
 					const wfsById = await fetchWfsFeatureById({ typename, fid, srs: crsCode });
 					setFound({ typename, fid, latlng: e.latlng, props, geojson: wfsById?.geojson });
-				} catch (err: any) {
+				} catch (err: unknown) {
 					console.error(err);
 					toast.error(`${t('error')}: ${err.message || err}`);
 				}
@@ -156,7 +155,7 @@ export default function MapView({
 			<ClickHandler />
 
 			{found?.geojson ? (
-				<GeoJSON key={found.fid || Math.random()} data={found.geojson as any} style={{ color: '#ff3b3b', weight: 4 }} />
+				<GeoJSON key={found.fid || Math.random()} data={found.geojson as GeoJSON.Feature} style={{ color: '#ff3b3b', weight: 4 }} />
 			) : found ? (
 				<Marker position={found.latlng}>
 					<Popup>

@@ -43,8 +43,9 @@ export async function fetchZwsLayerList() {
 			})).filter(l => l.name);
 			if (layers.length) return layers;
 		}
-	} catch {}
-
+	} catch (error) {
+		console.debug('Fetch error:', error);
+	}
 	// 2) POST с XML-командой
 	try {
 		const body = `<?xml version="1.0" encoding="UTF-8"?><zwsRequest><GetLayerList/></zwsRequest>`;
@@ -62,8 +63,9 @@ export async function fetchZwsLayerList() {
 			})).filter(l => l.name);
 			if (layers.length) return layers;
 		}
-	} catch {}
-
+	} catch (error) {
+		console.debug('Fetch error:', error);
+	}
 	// 3) GET c query-параметром
 	try {
 		const res = await fetch(`${ZWS_URL}?Action=GetLayerList`);
@@ -76,8 +78,9 @@ export async function fetchZwsLayerList() {
 			})).filter(l => l.name);
 			if (layers.length) return layers;
 		}
-	} catch {}
-
+	} catch (error) {
+		console.debug('Fetch error:', error);
+	}
 	// fallback
 	return [{ name: 'example:demo', title: 'example:demo' }];
 }
@@ -96,7 +99,7 @@ export async function fetchWfsFeatureById({typename, fid, srs}: {
 	}
 }
 
-export async function fetchWfsFirstInBBox({map, latlng, srs, typeNames}: {
+export async function fetchWfsFirstInBBox({latlng, srs, typeNames}: {
 	map: L.Map; latlng: L.LatLng; srs: 'EPSG:3857' | 'EPSG:4326'; typeNames: string[];
 }) {
 	function bboxAround(ll: L.LatLng): [number, number, number, number] {
@@ -121,7 +124,9 @@ export async function fetchWfsFirstInBBox({map, latlng, srs, typeNames}: {
 			const xml = await res.text();
 			const parsed = parseWfsGmlPointFeature(xml, srs);
 			if (parsed) return parsed;
-		} catch {}
+		} catch (error) {
+			console.debug('Fetch error:', error);
+		}
 	}
 	return undefined;
 }

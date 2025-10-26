@@ -26,7 +26,7 @@ export function parseFeatureInfoXml(xml: string): {
 	}
 }
 
-export function parseWfsGmlPointFeature(xml: string, srs: 'EPSG:3857' | 'EPSG:4326') {
+export function parseWfsGmlPointFeature(xml: string) {
 	try {
 		const doc = new DOMParser().parseFromString(xml, 'text/xml');
 		const members = doc.getElementsByTagNameNS('http://www.opengis.net/gml', 'featureMember');
