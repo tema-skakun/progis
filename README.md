@@ -1,73 +1,176 @@
-# React + TypeScript + Vite
+ProGIS Frontend Test Task
+=========================
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React приложение для отображения карт с подключением геосервисов (WMS/WFS/ZWS) с использованием Leaflet.
 
-Currently, two official plugins are available:
+ФУНКЦИОНАЛЬНОСТЬ
+----------------
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- Отображение карты с поддержкой двух систем координат:
+    * EPSG:3857 (Web Mercator)
+    * EPSG:4326 (WGS84)
+- Подключение геосервисов:
+    * WMS (Web Map Service) - для растровых слоев
+    * WFS (Web Feature Service) - для векторных данных
+    * ZWS (Zulu Web Service) - для тайловых подложек
+- Интерактивность:
+    * Клик по объекту на карте для получения информации
+    * Отображение свойств объекта во всплывающем окне
+    * Подсветка найденных объектов
+- Управление слоями:
+    * Выбор ZWS слоя для базовой подложки
+    * Включение/выключение WMS слоев
+- Интернационализация (русский/английский)
 
-## React Compiler
+ТЕХНОЛОГИИ
+----------
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- React 18 + TypeScript
+- Leaflet + React-Leaflet - для картографии
+- Vite - сборка и dev-сервер
+- React i18next - интернационализация
+- React Toastify - уведомления
 
-## Expanding the ESLint configuration
+ПРЕДВАРИТЕЛЬНЫЕ ТРЕБОВАНИЯ
+--------------------------
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- Node.js 16+
+- npm или yarn
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+БЫСТРЫЙ СТАРТ
+-------------
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+1. Клонирование репозитория
+```bash
+   git clone git@github.com:tema-skakun/progis.git
+   cd progis
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+2. Установка зависимостей
+```bash
+   npm install
 ```
+
+3. Запуск в режиме разработки
+```bash
+   npm run dev
+```
+   Приложение будет доступно по адресу: http://localhost:5173
+
+4. Сборка для продакшена
+```bash
+   npm run build
+```
+
+5. Просмотр собранной версии
+```bash
+   npm run preview
+```
+
+КОНФИГУРАЦИЯ
+------------
+Прокси-настройки:
+Приложение использует прокси для обхода CORS при запросах к OGC-сервисам.
+
+Доступные слои:
+
+ZWS слои (базовые подложки):
+
+- example:demo - демонстрационный слой
+- Автоматически загружаемый список доступных слоев
+
+WMS слои (тематические):
+
+- openlayers:teploset - Тепловая сеть
+- mo:thermo - Thermo
+- mo:vp - Водопроводная сеть
+
+ИСПОЛЬЗОВАНИЕ
+-------------
+
+1. Переключение системы координат - выпадающий список в верхней панели
+2. Выбор языка - русский/английский
+3. Управление слоями - панель в правом верхнем углу карты:
+    - Выбор ZWS слоя (доступно только для EPSG:3857)
+    - Включение/выключение WMS слоев
+4. Получение информации об объектах:
+    - Кликните на любой объект на карте
+    - Во всплывающем окне отобразятся свойства объекта
+    - Векторные объекты будут подсвечены красным контуром
+
+ОСОБЕННОСТИ РЕАЛИЗАЦИИ
+----------------------
+WMS GetFeatureInfo: При клике на карту отправляется запрос к WMS сервису для получения информации об объекте в точке
+клика.
+
+WFS Fallback: Если WMS не возвращает данные, выполняется WFS запрос для поиска объектов в bounding box вокруг точки
+клика.
+
+ZWS Tiles: Используется для отображения базовой картографической подложки в системе координат EPSG:3857.
+
+Обработка данных:
+
+- Поддержка различных форматов ответов (XML/GML, JSON)
+- Парсинг GML-фич с извлечением геометрии и атрибутов
+- Преобразование координат между системами
+
+СТРУКТУРА ПРОЕКТА
+-----------------
+```txt
+src/
+├── components/                 # React компоненты
+│   ├── MapView.tsx             # Основной компонент карты
+│   ├── WmsLayersControl.tsx    # Управление WMS слоями
+│   └── ZwsLayerSelect.tsx      # Выбор ZWS слоя
+├── services/
+│   └── ogc.ts                  # Сервисы для работы с OGC
+├── utils/
+│   └── xml.ts                  # Утилиты для парсинга XML
+├── i18n.ts                     # Конфигурация интернационализации
+└── main.tsx                    # Точка входа
+```
+
+АУТЕНТИФИКАЦИЯ
+--------------
+Для доступа к OGC-сервисам используются учетные данные:
+
+- Логин: mo
+- Пароль: mo
+
+Учетные данные передаются через базовую HTTP аутентификацию в заголовках прокси.
+
+ВОЗМОЖНЫЕ ПРОБЛЕМЫ И РЕШЕНИЯ
+----------------------------
+Проблема: Карта не загружается, ошибки CORS
+Решение: Приложение использует прокси-сервер Vite для обхода CORS
+
+Проблема: ZWS слои не работают в EPSG:4326
+Решение: ZWS поддерживает только EPSG:3857, для EPSG:4326 используется WMS-слой mo:region
+
+Проблема: Не отображаются всплывающие окна
+Решение: Проверьте консоль браузера на наличие ошибок парсинга XML
+
+КРИТЕРИИ ВЫПОЛНЕНИЯ
+-------------------
+-[x] Отображение карты со слоями (WMS/WFS/ZWS)
+-[x] Интерактивность: клик по объекту → отображение атрибутов
+-[x] Чистый и структурированный код
+-[x] Использование React-подходов
+-[x] Обработка ошибок
+-[x] README с инструкцией по запуску
+
+РАЗРАБОТКА
+----------
+Для дополнительной разработки:
+- запуск линтера
+```bash
+npm run lint
+```
+- запуск TypeScript проверки
+```bash
+npm run type-check
+```
+
+ЛИЦЕНЗИЯ
+--------
+Тестовое задание для компании ProGIS
