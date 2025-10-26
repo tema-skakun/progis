@@ -85,7 +85,7 @@ export async function fetchZwsLayerList() {
 	return [{ name: 'example:demo', title: 'example:demo' }];
 }
 
-export async function fetchWfsFeatureById({typename, fid, srs}: {
+export async function fetchWfsFeatureById({typename, fid}: {
 	typename: string; fid?: string; srs: 'EPSG:3857' | 'EPSG:4326';
 }) {
 	try {
@@ -93,7 +93,7 @@ export async function fetchWfsFeatureById({typename, fid, srs}: {
 		if (fid) q.set('featureId', fid);
 		const res = await fetch(`${WFS_URL}?${q.toString()}`);
 		const xml = await res.text();
-		return parseWfsGmlPointFeature(xml, srs);
+		return parseWfsGmlPointFeature(xml);
 	} catch {
 		return undefined;
 	}
@@ -122,7 +122,7 @@ export async function fetchWfsFirstInBBox({latlng, srs, typeNames}: {
 			});
 			const res = await fetch(`${WFS_URL}?${q.toString()}`);
 			const xml = await res.text();
-			const parsed = parseWfsGmlPointFeature(xml, srs);
+			const parsed = parseWfsGmlPointFeature(xml);
 			if (parsed) return parsed;
 		} catch (error) {
 			console.debug('Fetch error:', error);

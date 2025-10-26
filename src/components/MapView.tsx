@@ -71,14 +71,15 @@ export default function MapView({
 						const wfs = await fetchWfsFirstInBBox({ map, latlng: e.latlng, srs: crsCode, typeNames: wmsLayers });
 						if (!wfs) { toast.info(t('nothingFound')); setFound(null); return; }
 						setFound({ typename: wfs.typename, latlng: e.latlng, props: wfs.props, geojson: wfs.geojson, fid: wfs.fid });
-						map.openPopup(); return;
+						return;
 					}
 
 					const wfsById = await fetchWfsFeatureById({ typename, fid, srs: crsCode });
 					setFound({ typename, fid, latlng: e.latlng, props, geojson: wfsById?.geojson });
 				} catch (err: unknown) {
 					console.error(err);
-					toast.error(`${t('error')}: ${err.message || err}`);
+					const message = err instanceof Error ? err.message : String(err);
+					toast.error(`${t('error')}: ${message}`);
 				}
 			},
 		});
@@ -155,7 +156,7 @@ export default function MapView({
 			<ClickHandler />
 
 			{found?.geojson ? (
-				<GeoJSON key={found.fid || Math.random()} data={found.geojson as GeoJSON.Feature} style={{ color: '#ff3b3b', weight: 4 }} />
+				<GeoJSON key={found.fid || Math.random()} data={found.geojson} style={{ color: '#ff3b3b', weight: 4 }} />
 			) : found ? (
 				<Marker position={found.latlng}>
 					<Popup>

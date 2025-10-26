@@ -59,7 +59,7 @@ export function parseWfsGmlPointFeature(xml: string) {
 			type: 'Feature',
 			geometry: {type: 'Point', coordinates: [lng, lat]},
 			properties: props
-		} as const;
+		};
 
 		return {typename, fid, props, geojson};
 	} catch {
