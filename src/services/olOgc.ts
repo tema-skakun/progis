@@ -40,13 +40,13 @@ export function buildOlGetFeatureInfoUrl({
 	};
 
 	const url = `${OGC_PREFIX}/ws?${new URLSearchParams(params).toString()}`;
-	console.log('Built GetFeatureInfo URL:', url);
+	// console.log('Built GetFeatureInfo URL:', url);
 
 	return url;
 }
 
 export async function fetchOlFeatureInfo(url: string): Promise<string> {
-	console.log('Fetching from URL:', url);
+	// console.log('Fetching from URL:', url);
 	const response = await fetch(url);
 
 	if (!response.ok) {
@@ -54,8 +54,8 @@ export async function fetchOlFeatureInfo(url: string): Promise<string> {
 	}
 
 	const text = await response.text();
-	console.log('Response status:', response.status);
-	console.log('Response text (first 500 chars):', text.substring(0, 500));
+	// console.log('Response status:', response.status);
+	// console.log('Response text (first 500 chars):', text.substring(0, 500));
 
 	// Проверяем, является ли ответ ошибкой WMS
 	if (text.includes('ServiceExceptionReport') || text.includes('ServiceException')) {
@@ -64,9 +64,9 @@ export async function fetchOlFeatureInfo(url: string): Promise<string> {
 		if (text.startsWith('PD94bWw')) { // Это base64?
 			try {
 				errorText = atob(text);
-				console.log('Decoded base64 error:', errorText);
+				// console.log('Decoded base64 error:', errorText);
 			} catch (e) {
-				console.log('Could not decode base64, using original text');
+				// console.log('Could not decode base64, using original text');
 			}
 		}
 

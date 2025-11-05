@@ -39,7 +39,7 @@ function MapClickHandler({ map, onMapClick }: { map: any; onMapClick: (coordinat
 		if (!map) return;
 
 		const clickHandler = (event: any) => {
-			console.log('Map clicked:', event.coordinate);
+			// console.log('Map clicked:', event.coordinate);
 			const coordinate = event.coordinate;
 			onMapClick(coordinate);
 		};
@@ -194,14 +194,14 @@ export default function MapView({
 	}), [vectorSource, foundFeatureStyle]);
 
 	const handleMapReady = (map: any) => {
-		console.log('Map ready:', map);
+		// console.log('Map ready:', map);
 		setCurrentMap(map);
 	};
 
 	const handleMapClick = async (coordinate: [number, number]) => {
-		console.log('Handle map click called:', coordinate);
+		// console.log('Handle map click called:', coordinate);
 		if (!currentMap || isLoading || wmsLayers.length === 0) {
-			console.log('Cannot process click:', { currentMap, isLoading, wmsLayers });
+			// console.log('Cannot process click:', { currentMap, isLoading, wmsLayers });
 			return;
 		}
 
@@ -210,7 +210,7 @@ export default function MapView({
 		// Пробуем каждый слой по отдельности, так как некоторые могут не существовать
 		for (const layer of wmsLayers) {
 			try {
-				console.log(`Trying layer: ${layer}`);
+				// console.log(`Trying layer: ${layer}`);
 
 				// Строим URL для GetFeatureInfo для одного слоя
 				const url = buildOlGetFeatureInfoUrl({
@@ -220,15 +220,15 @@ export default function MapView({
 					layers: [layer] // Пробуем только один слой
 				});
 
-				console.log('Fetching feature info from:', url);
+				// console.log('Fetching feature info from:', url);
 
 				// Получаем данные
 				const xmlResponse = await fetchOlFeatureInfo(url);
-				console.log('XML response received for layer:', layer);
+				// console.log('XML response received for layer:', layer);
 
 				// Парсим XML
 				const featureInfo = parseFeatureInfoXml(xmlResponse);
-				console.log('Parsed feature info:', featureInfo);
+				// console.log('Parsed feature info:', featureInfo);
 
 				if (featureInfo) {
 					// Преобразуем координаты обратно в градусы для унификации

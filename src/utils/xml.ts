@@ -58,13 +58,13 @@ export function parseFeatureInfoXml(xml: string): {
 		// Ищем первый gml:featureMember
 		const members = doc.getElementsByTagNameNS('http://www.opengis.net/gml', 'featureMember');
 		if (!members || members.length === 0) {
-			console.log('No featureMember elements found in XML');
+			// console.log('No featureMember elements found in XML');
 			return null;
 		}
 
 		const featureNode = members[0].firstElementChild as Element | null;
 		if (!featureNode) {
-			console.log('No feature node found in featureMember');
+			// console.log('No feature node found in featureMember');
 			return null;
 		}
 
@@ -79,7 +79,7 @@ export function parseFeatureInfoXml(xml: string): {
 			if (val) props[key] = val;
 		}
 
-		console.log('Parsed feature:', { typename, fid, props });
+		// console.log('Parsed feature:', { typename, fid, props });
 		return {typename, fid, props};
 	} catch (error) {
 		console.error('Error parsing feature info XML:', error);
