@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from 'react';
 import { View } from 'ol';
-import { fromLonLat } from 'ol/proj';
+import { fromLonLat, toLonLat } from 'ol/proj';
 import { defaults as defaultControls } from 'ol/control';
 import { defaults as defaultInteractions } from 'ol/interaction';
 import TileLayer from 'ol/layer/Tile';
@@ -13,6 +13,8 @@ import { Style, Circle, Fill, Stroke } from 'ol/style';
 import { Feature } from 'ol';
 import OLMap from './OLMap';
 import { WMS_URL, OGC_PREFIX } from '../services/ogc';
+import { buildOlGetFeatureInfoUrl, fetchOlFeatureInfo } from '../services/olOgc';
+import { parseFeatureInfoXml } from '../utils/xml';
 import { toast } from 'react-toastify';
 import { useTranslation } from 'react-i18next';
 import { CRSCode } from '../App';
@@ -28,17 +30,18 @@ export type FoundFeature = {
 };
 
 const ZWS_DEFAULT_LAYER = 'example:demo';
-const WMS_DEFAULT_LAYERS = ['openlayers:teploset', 'mo:thermo', 'mo:vp'];
+// const WMS_DEFAULT_LAYERS = ['openlayers:teploset', 'mo:thermo', 'mo:vp'];
+const WMS_DEFAULT_LAYERS = ['openlayers:teploset'];
 
 // Компонент для обработки кликов
-function MapClickHandler({ map, onMapClick }: { map: any; onMapClick: (coordinate: [number, number], pixel: [number, number]) => void }) {
+function MapClickHandler({ map, onMapClick }: { map: any; onMapClick: (coordinate: [number, number]) => void }) {
 	useEffect(() => {
 		if (!map) return;
 
 		const clickHandler = (event: any) => {
+			console.log('Map clicked:', event.coordinate);
 			const coordinate = event.coordinate;
-			const pixel = map.getEventPixel(event.originalEvent);
-			onMapClick(coordinate, pixel);
+			onMapClick(coordinate);
 		};
 
 		map.on('click', clickHandler);
@@ -50,6 +53,115 @@ function MapClickHandler({ map, onMapClick }: { map: any; onMapClick: (coordinat
 	return null;
 }
 
+// Компонент попапа
+function FeaturePopup({
+												feature,
+												onClose
+											}: {
+	feature: FoundFeature;
+	onClose: () => void;
+}) {
+	const { t } = useTranslation();
+
+	return (
+		<div style={{
+			position: 'absolute',
+			top: 12,
+			right: 12,
+			width: 400,
+			maxHeight: 'calc(100vh - 100px)',
+			background: '#fff',
+			borderRadius: 8,
+			boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+			zIndex: 1000,
+			display: 'flex',
+			flexDirection: 'column'
+		}}>
+			{/* Заголовок */}
+			<div style={{
+				padding: '12px 16px',
+				borderBottom: '1px solid #e5e7eb',
+				display: 'flex',
+				justifyContent: 'space-between',
+				alignItems: 'center',
+				background: '#f8f9fa'
+			}}>
+				<h4 style={{ margin: 0, fontSize: '16px' }}>
+					{feature.typename}
+				</h4>
+				<button
+					onClick={onClose}
+					style={{
+						background: 'none',
+						border: 'none',
+						fontSize: '18px',
+						cursor: 'pointer',
+						color: '#6b7280',
+						padding: 4,
+						borderRadius: 4
+					}}
+				>
+					×
+				</button>
+			</div>
+
+			{/* Содержимое с прокруткой */}
+			<div style={{
+				padding: 16,
+				overflowY: 'auto',
+				flex: 1
+			}}>
+				{Object.keys(feature.props).length === 0 ? (
+					<p style={{ color: '#6b7280', textAlign: 'center' }}>
+						{t('noProperties')}
+					</p>
+				) : (
+					<table style={{
+						width: '100%',
+						borderCollapse: 'collapse',
+						fontSize: '14px'
+					}}>
+						<tbody>
+						{Object.entries(feature.props).map(([key, value]) => (
+							<tr key={key} style={{ borderBottom: '1px solid #f3f4f6' }}>
+								<td style={{
+									padding: '8px 12px 8px 0',
+									fontWeight: 600,
+									color: '#374151',
+									verticalAlign: 'top',
+									whiteSpace: 'nowrap'
+								}}>
+									{key}
+								</td>
+								<td style={{
+									padding: '8px 0',
+									color: '#6b7280',
+									wordBreak: 'break-word'
+								}}>
+									{String(value)}
+								</td>
+							</tr>
+						))}
+						</tbody>
+					</table>
+				)}
+			</div>
+
+			{/* Футер */}
+			<div style={{
+				padding: '12px 16px',
+				borderTop: '1px solid #e5e7eb',
+				background: '#f8f9fa',
+				fontSize: '12px',
+				color: '#6b7280'
+			}}>
+				{feature.fid && `ID: ${feature.fid}`}
+				{!feature.fid && t('featureInfo')}
+			</div>
+		</div>
+	);
+}
+
 export default function MapView({
 																	center, zoom, crsCode,
 																}: { center: [number, number]; zoom: number; crsCode: CRSCode; }) {
@@ -58,6 +170,7 @@ export default function MapView({
 	const [wmsLayers, setWmsLayers] = useState<string[]>(WMS_DEFAULT_LAYERS);
 	const [found, setFound] = useState<FoundFeature | null>(null);
 	const [currentMap, setCurrentMap] = useState<any>(null);
+	const [isLoading, setIsLoading] = useState(false);
 
 	const centerProjected = useMemo(() =>
 			crsCode === 'EPSG:3857' ? fromLonLat(center) : center,
@@ -80,28 +193,71 @@ export default function MapView({
 		style: foundFeatureStyle
 	}), [vectorSource, foundFeatureStyle]);
 
-	const handleMapClick = async (coordinate: [number, number], pixel: [number, number]) => {
-		if (!currentMap) return;
+	const handleMapReady = (map: any) => {
+		console.log('Map ready:', map);
+		setCurrentMap(map);
+	};
 
-		try {
-			// ВРЕМЕННО: используем старую функцию из Leaflet, нужно будет обновить
-			// Для теста просто покажем координаты
-			console.log('Map click:', coordinate, pixel);
-			toast.info(`Clicked at: ${coordinate[0].toFixed(6)}, ${coordinate[1].toFixed(6)}`);
-
-			// TODO: Обновить buildGetFeatureInfoUrl для OpenLayers
-			// const url = buildGetFeatureInfoUrl({
-			//   map: currentMap,
-			//   coordinate: pixel,
-			//   srs: crsCode,
-			//   layers: wmsLayers
-			// });
-
-		} catch (err: unknown) {
-			console.error(err);
-			const message = err instanceof Error ? err.message : String(err);
-			toast.error(`${t('error')}: ${message}`);
+	const handleMapClick = async (coordinate: [number, number]) => {
+		console.log('Handle map click called:', coordinate);
+		if (!currentMap || isLoading || wmsLayers.length === 0) {
+			console.log('Cannot process click:', { currentMap, isLoading, wmsLayers });
+			return;
 		}
+
+		setIsLoading(true);
+
+		// Пробуем каждый слой по отдельности, так как некоторые могут не существовать
+		for (const layer of wmsLayers) {
+			try {
+				console.log(`Trying layer: ${layer}`);
+
+				// Строим URL для GetFeatureInfo для одного слоя
+				const url = buildOlGetFeatureInfoUrl({
+					map: currentMap,
+					coordinate: coordinate,
+					srs: crsCode,
+					layers: [layer] // Пробуем только один слой
+				});
+
+				console.log('Fetching feature info from:', url);
+
+				// Получаем данные
+				const xmlResponse = await fetchOlFeatureInfo(url);
+				console.log('XML response received for layer:', layer);
+
+				// Парсим XML
+				const featureInfo = parseFeatureInfoXml(xmlResponse);
+				console.log('Parsed feature info:', featureInfo);
+
+				if (featureInfo) {
+					// Преобразуем координаты обратно в градусы для унификации
+					const lonLatCoordinate = crsCode === 'EPSG:3857'
+						? toLonLat(coordinate)
+						: coordinate;
+
+					const foundFeature: FoundFeature = {
+						typename: featureInfo.typename,
+						fid: featureInfo.fid,
+						coordinate: lonLatCoordinate as [number, number],
+						props: featureInfo.props
+					};
+
+					setFound(foundFeature);
+					toast.success(t('featureFound'));
+					setIsLoading(false);
+					return; // Успешно нашли объект, выходим
+				}
+			} catch (err: unknown) {
+				console.warn(`Error with layer ${layer}:`, err);
+				// Продолжаем пробовать следующий слой
+			}
+		}
+
+		// Если дошли сюда, значит ни один слой не вернул данные
+		setFound(null);
+		toast.info(t('noFeatureFound'));
+		setIsLoading(false);
 	};
 
 	// Обновление векторного источника при изменении found
@@ -109,12 +265,17 @@ export default function MapView({
 		vectorSource.clear();
 
 		if (found) {
+			// Преобразуем координаты обратно в проекцию карты
+			const projectedCoordinate = crsCode === 'EPSG:3857'
+				? fromLonLat(found.coordinate)
+				: found.coordinate;
+
 			const feature = new Feature({
-				geometry: new Point(found.coordinate)
+				geometry: new Point(projectedCoordinate)
 			});
 			vectorSource.addFeature(feature);
 		}
-	}, [found, vectorSource]);
+	}, [found, vectorSource, crsCode]);
 
 	// Создаём слои
 	const layers = useMemo(() => {
@@ -135,7 +296,6 @@ export default function MapView({
 						source: new TileWMS({
 							url: `${OGC_PREFIX}/zws/GetLayerTile`,
 							params: { 'Layer': zwsLayer },
-							tileSize: 256
 						}),
 						zIndex: 2
 					})
@@ -204,13 +364,33 @@ export default function MapView({
 			<OLMap
 				{...mapOptions}
 				style={{ height: '100%', width: '100%' }}
+				onMapReady={handleMapReady}
 			>
-				<MapClickHandler map={currentMap} onMapClick={handleMapClick} />
+				{currentMap && (
+					<MapClickHandler map={currentMap} onMapClick={handleMapClick} />
+				)}
 			</OLMap>
+
+			{/* Индикатор загрузки */}
+			{isLoading && (
+				<div style={{
+					position: 'absolute',
+					top: '50%',
+					left: '50%',
+					transform: 'translate(-50%, -50%)',
+					background: 'rgba(255,255,255,0.9)',
+					padding: '16px 24px',
+					borderRadius: 8,
+					boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+					zIndex: 1001
+				}}>
+					{t('loading')}...
+				</div>
+			)}
 
 			{/* Контролы слоёв */}
 			<div style={{
-				position: 'absolute', top: 12, right: 12, background: '#fff',
+				position: 'absolute', top: 12, left: 12, background: '#fff',
 				padding: 8, borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.15)',
 				display: 'flex', flexDirection: 'column', gap: 8, zIndex: 1000
 			}}>
@@ -218,48 +398,12 @@ export default function MapView({
 				<WmsLayersControl value={wmsLayers} onChange={setWmsLayers} />
 			</div>
 
-			{/* Popup для найденного объекта */}
+			{/* Попап с информацией об объекте */}
 			{found && (
-				<div style={{
-					position: 'absolute',
-					bottom: 20,
-					left: '50%',
-					transform: 'translateX(-50%)',
-					background: '#fff',
-					padding: 16,
-					borderRadius: 8,
-					boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-					maxWidth: 400,
-					zIndex: 1000
-				}}>
-					<h4 style={{ margin: 0, marginBottom: 8 }}>{found.typename}</h4>
-					<table style={{ width: '100%' }}>
-						<tbody>
-						{Object.entries(found.props).slice(0, 10).map(([k, v]) => (
-							<tr key={k}>
-								<td style={{ paddingRight: 8, paddingBottom: 4 }}>
-									<strong>{k}</strong>
-								</td>
-								<td style={{ paddingBottom: 4 }}>{String(v)}</td>
-							</tr>
-						))}
-						</tbody>
-					</table>
-					<button
-						onClick={() => setFound(null)}
-						style={{
-							marginTop: 8,
-							padding: '4px 8px',
-							background: '#ff3b3b',
-							color: 'white',
-							border: 'none',
-							borderRadius: 4,
-							cursor: 'pointer'
-						}}
-					>
-						{t('close')}
-					</button>
-				</div>
+				<FeaturePopup
+					feature={found}
+					onClose={() => setFound(null)}
+				/>
 			)}
 		</div>
 	);

@@ -1,4 +1,3 @@
-// src/components/OLMap.tsx
 import React, { ReactNode, useRef, useEffect, useState } from 'react';
 import { useMap } from '../hooks/useMap';
 import { MapOptions } from 'ol/Map';
@@ -7,9 +6,10 @@ interface OLMapProps extends MapOptions {
 	children?: ReactNode;
 	className?: string;
 	style?: React.CSSProperties;
+	onMapReady?: (map: any) => void;
 }
 
-export default function OLMap({ children, className, style, ...mapOptions }: OLMapProps) {
+export default function OLMap({ children, className, style, onMapReady, ...mapOptions }: OLMapProps) {
 	const mapRef = useRef<HTMLDivElement>(null);
 	const { map, setMapContainer } = useMap(mapOptions);
 	const [childMap, setChildMap] = useState<any>(null);
@@ -20,12 +20,15 @@ export default function OLMap({ children, className, style, ...mapOptions }: OLM
 		}
 	}, [setMapContainer]);
 
-	// Обновляем childMap когда map готов
+	// Обновляем childMap когда map готов и вызываем callback
 	useEffect(() => {
 		if (map) {
 			setChildMap(map);
+			if (onMapReady) {
+				onMapReady(map);
+			}
 		}
-	}, [map]);
+	}, [map, onMapReady]);
 
 	// Передаём map в дочерние компоненты
 	const childrenWithProps = childMap ?

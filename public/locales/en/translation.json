@@ -4,5 +4,10 @@
   "zwsLayer": "ZWS layer",
   "wmsLayers": "WMS layers",
   "error": "Error",
-  "nothingFound": "Nothing found"
+  "nothingFound": "Nothing found",
+  "noProperties": "No properties to display",
+  "featureInfo": "Feature information",
+  "featureFound": "Feature found",
+  "noFeatureFound": "No features found",
+  "loading": "Loading"
 }

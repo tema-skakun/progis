@@ -4,5 +4,10 @@
   "zwsLayer": "ZWS слой",
   "wmsLayers": "WMS слои",
   "error": "Ошибка",
-  "nothingFound": "Объект не найден"
+  "nothingFound": "Объект не найден",
+  "noProperties": "Нет свойств для отображения",
+  "featureInfo": "Информация об объекте",
+  "featureFound": "Объект найден",
+  "noFeatureFound": "Объекты не найдены",
+  "loading": "Загрузка"
 }
