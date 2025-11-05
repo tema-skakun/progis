@@ -1,7 +1,17 @@
-import { useMemo, useState } from 'react';
-import { MapContainer, TileLayer, WMSTileLayer, useMapEvents, Marker, Popup, GeoJSON } from 'react-leaflet';
-import L, { CRS } from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+import { useMemo, useState, useEffect } from 'react';
+import { View } from 'ol';
+import { fromLonLat, toLonLat } from 'ol/proj';
+import { defaults as defaultControls } from 'ol/control';
+import { defaults as defaultInteractions } from 'ol/interaction';
+import TileLayer from 'ol/layer/Tile';
+import ImageLayer from 'ol/layer/Image';
+import VectorLayer from 'ol/layer/Vector';
+import { OSM, TileWMS, ImageWMS } from 'ol/source';
+import { Vector as VectorSource } from 'ol/source';
+import { Point } from 'ol/geom';
+import { Style, Circle, Fill, Stroke } from 'ol/style';
+import { Feature } from 'ol';
+import OLMap from './OLMap';
 import { WMS_URL, OGC_PREFIX, buildGetFeatureInfoUrl, fetchWfsFeatureById, fetchWfsFirstInBBox } from '../services/ogc';
 import { parseFeatureInfoXml } from '../utils/xml';
 import { toast } from 'react-toastify';
@@ -10,25 +20,36 @@ import { CRSCode } from '../App';
 import ZwsLayerSelect from './ZwsLayerSelect';
 import WmsLayersControl from './WmsLayersControl';
 
-import iconUrl from 'leaflet/dist/images/marker-icon.png';
-import iconRetinaUrl from 'leaflet/dist/images/marker-icon-2x.png';
-import shadowUrl from 'leaflet/dist/images/marker-shadow.png';
-L.Marker.prototype.options.icon = L.icon({
-	iconUrl, iconRetinaUrl, shadowUrl,
-	iconSize: [25, 41], iconAnchor: [12, 41],
-	popupAnchor: [1, -34], shadowSize: [41, 41],
-});
-
 export type FoundFeature = {
 	typename: string;
 	fid?: string;
-	latlng: L.LatLng;
+	coordinate: [number, number];
 	props: Record<string, string>;
 	geojson?: unknown;
 };
 
 const ZWS_DEFAULT_LAYER = 'example:demo';
 const WMS_DEFAULT_LAYERS = ['openlayers:teploset', 'mo:thermo', 'mo:vp'];
+
+// Компонент для обработки кликов
+function MapClickHandler({ map, onMapClick }: { map: any; onMapClick: (coordinate: [number, number], pixel: [number, number]) => void }) {
+	useEffect(() => {
+		if (!map) return;
+
+		const clickHandler = (event: any) => {
+			const coordinate = event.coordinate;
+			const pixel = map.getEventPixel(event.originalEvent);
+			onMapClick(coordinate, pixel);
+		};
+
+		map.on('click', clickHandler);
+		return () => {
+			map.un('click', clickHandler);
+		};
+	}, [map, onMapClick]);
+
+	return null;
+}
 
 export default function MapView({
 																	center, zoom, crsCode,
@@ -37,144 +58,158 @@ export default function MapView({
 	const [zwsLayer, setZwsLayer] = useState<string>(ZWS_DEFAULT_LAYER);
 	const [wmsLayers, setWmsLayers] = useState<string[]>(WMS_DEFAULT_LAYERS);
 	const [found, setFound] = useState<FoundFeature | null>(null);
+	const [currentMap, setCurrentMap] = useState<any>(null);
 
-	const crs: CRS = useMemo(() => (crsCode === 'EPSG:4326' ? L.CRS.EPSG4326 : L.CRS.EPSG3857), [crsCode]);
-
-	function ClickHandler() {
-		const map = useMapEvents({
-			click: async (e) => {
-				try {
-					const url = buildGetFeatureInfoUrl({ map, latlng: e.latlng, srs: crsCode, layers: wmsLayers });
-					const res = await fetch(url);
-					const ct = res.headers.get('content-type') || '';
-					if (!res.ok) throw new Error(`WMS GetFeatureInfo HTTP ${res.status}`);
-
-					let typename: string | undefined;
-					let fid: string | undefined;
-					let props: Record<string, string> = {};
-
-					if (ct.includes('application/json')) {
-						const data = await res.json();
-						const feature = Array.isArray(data.features) ? data.features[0] : undefined;
-						if (feature) {
-							typename = feature.id?.split('.')[0];
-							fid = feature.id;
-							props = feature.properties ?? {};
-						}
-					} else {
-						const text = await res.text();
-						const parsed = parseFeatureInfoXml(text);
-						if (parsed) { typename = parsed.typename; fid = parsed.fid; props = parsed.props; }
-					}
-
-					if (!typename) {
-						const wfs = await fetchWfsFirstInBBox({ map, latlng: e.latlng, srs: crsCode, typeNames: wmsLayers });
-						if (!wfs) { toast.info(t('nothingFound')); setFound(null); return; }
-						setFound({ typename: wfs.typename, latlng: e.latlng, props: wfs.props, geojson: wfs.geojson, fid: wfs.fid });
-						return;
-					}
-
-					const wfsById = await fetchWfsFeatureById({ typename, fid, srs: crsCode });
-					setFound({ typename, fid, latlng: e.latlng, props, geojson: wfsById?.geojson });
-				} catch (err: unknown) {
-					console.error(err);
-					const message = err instanceof Error ? err.message : String(err);
-					toast.error(`${t('error')}: ${message}`);
-				}
-			},
-		});
-		return null;
-	}
-
-	const zwsTileUrl = useMemo(() => {
-		if (crsCode !== 'EPSG:3857') return undefined;
-		const layerParam = encodeURIComponent(zwsLayer);
-		return `${OGC_PREFIX}/zws/GetLayerTile?Layer=${layerParam}&x={x}&y={y}&z={z}`;
-	}, [zwsLayer, crsCode]);
-
-	// База для 3857: всегда OSM (zIndex 1) + ZWS как оверлей (zIndex 2)
-	const base3857 = (
-		<>
-			<TileLayer
-				url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-				attribution="&copy; OSM"
-				zIndex={1}
-			/>
-			{zwsTileUrl && (
-				<TileLayer
-					url={zwsTileUrl}
-					tileSize={256}
-					zIndex={2}
-					eventHandlers={{
-						tileerror: (e) => console.warn('ZWS tile error', e?.tile?.src),
-					}}
-				/>
-			)}
-		</>
+	const centerProjected = useMemo(() =>
+			crsCode === 'EPSG:3857' ? fromLonLat(center) : center,
+		[center, crsCode]
 	);
 
-	// База для 4326: любой «плотный» WMS слой без прозрачности (zIndex 1)
-	const base4326 = (
-		<WMSTileLayer
-			url={WMS_URL}
-			params={{
-				service: 'WMS',
-				version: '1.1.1',
-				request: 'GetMap',
-				layers: 'mo:region',
-				styles: '',
-				format: 'image/jpeg',
-				transparent: false,
-				srs: 'EPSG:4326',
-			}}
-			zIndex={1}
-		/>
-	);
+	// Стиль для найденных features
+	const foundFeatureStyle = useMemo(() => new Style({
+		image: new Circle({
+			radius: 6,
+			fill: new Fill({ color: '#ff3b3b' }),
+			stroke: new Stroke({ color: '#fff', width: 2 })
+		})
+	}), []);
+
+	// Векторный источник для найденных объектов
+	const vectorSource = useMemo(() => new VectorSource(), []);
+	const vectorLayer = useMemo(() => new VectorLayer({
+		source: vectorSource,
+		style: foundFeatureStyle
+	}), [vectorSource, foundFeatureStyle]);
+
+	const handleMapClick = async (coordinate: [number, number], pixel: [number, number]) => {
+		if (!currentMap) return;
+
+		try {
+			// ВРЕМЕННО: используем старую функцию из Leaflet, нужно будет обновить
+			// Для теста просто покажем координаты
+			console.log('Map click:', coordinate, pixel);
+			toast.info(`Clicked at: ${coordinate[0].toFixed(6)}, ${coordinate[1].toFixed(6)}`);
+
+			// TODO: Обновить buildGetFeatureInfoUrl для OpenLayers
+			// const url = buildGetFeatureInfoUrl({
+			//   map: currentMap,
+			//   coordinate: pixel,
+			//   srs: crsCode,
+			//   layers: wmsLayers
+			// });
+
+		} catch (err: unknown) {
+			console.error(err);
+			const message = err instanceof Error ? err.message : String(err);
+			toast.error(`${t('error')}: ${message}`);
+		}
+	};
+
+	// Обновление векторного источника при изменении found
+	useEffect(() => {
+		vectorSource.clear();
+
+		if (found) {
+			const feature = new Feature({
+				geometry: new Point(found.coordinate)
+			});
+			vectorSource.addFeature(feature);
+		}
+	}, [found, vectorSource]);
+
+	// Создаём слои
+	const layers = useMemo(() => {
+		const baseLayers = [];
+
+		// Базовые слои для EPSG:3857
+		if (crsCode === 'EPSG:3857') {
+			baseLayers.push(
+				new TileLayer({
+					source: new OSM(),
+					zIndex: 1
+				})
+			);
+
+			if (zwsLayer) {
+				baseLayers.push(
+					new TileLayer({
+						source: new TileWMS({
+							url: `${OGC_PREFIX}/zws/GetLayerTile`,
+							params: { 'Layer': zwsLayer },
+							tileSize: 256
+						}),
+						zIndex: 2
+					})
+				);
+			}
+		} else {
+			// Базовый слой для EPSG:4326
+			baseLayers.push(
+				new ImageLayer({
+					source: new ImageWMS({
+						url: WMS_URL,
+						params: {
+							'LAYERS': 'mo:region',
+							'FORMAT': 'image/jpeg',
+							'SRS': 'EPSG:4326'
+						},
+						ratio: 1
+					}),
+					zIndex: 1
+				})
+			);
+		}
+
+		// WMS слои
+		const wmsLayersArray = wmsLayers.map(layer =>
+			new ImageLayer({
+				source: new ImageWMS({
+					url: WMS_URL,
+					params: {
+						'LAYERS': layer,
+						'FORMAT': 'image/png',
+						'TRANSPARENT': 'true',
+						'SRS': crsCode
+					},
+					ratio: 1
+				}),
+				zIndex: 3
+			})
+		);
+
+		return [...baseLayers, ...wmsLayersArray, vectorLayer];
+	}, [crsCode, zwsLayer, wmsLayers, vectorLayer]);
+
+	const view = useMemo(() => new View({
+		center: centerProjected,
+		zoom: zoom,
+		projection: crsCode
+	}), [centerProjected, zoom, crsCode]);
+
+	const mapOptions = useMemo(() => ({
+		view: view,
+		layers: layers,
+		controls: defaultControls({
+			zoom: true,
+			rotate: true,
+			attribution: true
+		}),
+		interactions: defaultInteractions({
+			pinchRotate: true,
+			mouseWheelZoom: true
+		})
+	}), [view, layers]);
 
 	return (
-		<MapContainer center={center} zoom={zoom} crs={crs} style={{ height: '100%', width: '100%' }}>
-			{crsCode === 'EPSG:4326' ? base4326 : base3857}
+		<div style={{ height: '100%', width: '100%', position: 'relative' }}>
+			<OLMap
+				{...mapOptions}
+				style={{ height: '100%', width: '100%' }}
+			>
+				<MapClickHandler map={currentMap} onMapClick={handleMapClick} />
+			</OLMap>
 
-			{wmsLayers.map((layer) => (
-				<WMSTileLayer
-					key={layer}
-					url={WMS_URL}
-					params={{
-						service: 'WMS',
-						version: '1.1.1',
-						request: 'GetMap',
-						layers: layer,
-						styles: '',
-						format: 'image/png',
-						transparent: true,
-						srs: crsCode,
-					}}
-					zIndex={3}
-				/>
-			))}
-
-			<ClickHandler />
-
-			{found?.geojson ? (
-				<GeoJSON key={found.fid || Math.random()} data={found.geojson} style={{ color: '#ff3b3b', weight: 4 }} />
-			) : found ? (
-				<Marker position={found.latlng}>
-					<Popup>
-						<h4 style={{ margin: 0 }}>{found.typename}</h4>
-						<table>
-							<tbody>
-							{Object.entries(found.props).slice(0, 20).map(([k, v]) => (
-								<tr key={k}>
-									<td style={{ paddingRight: 8 }}><strong>{k}</strong></td>
-									<td>{String(v)}</td>
-								</tr>
-							))}
-							</tbody>
-						</table>
-					</Popup>
-				</Marker>
-			) : null}
-
+			{/* Контролы слоёв */}
 			<div style={{
 				position: 'absolute', top: 12, right: 12, background: '#fff',
 				padding: 8, borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.15)',
@@ -183,6 +218,50 @@ export default function MapView({
 				<ZwsLayerSelect value={zwsLayer} onChange={setZwsLayer} disabled={crsCode !== 'EPSG:3857'} />
 				<WmsLayersControl value={wmsLayers} onChange={setWmsLayers} />
 			</div>
-		</MapContainer>
+
+			{/* Popup для найденного объекта */}
+			{found && (
+				<div style={{
+					position: 'absolute',
+					bottom: 20,
+					left: '50%',
+					transform: 'translateX(-50%)',
+					background: '#fff',
+					padding: 16,
+					borderRadius: 8,
+					boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+					maxWidth: 400,
+					zIndex: 1000
+				}}>
+					<h4 style={{ margin: 0, marginBottom: 8 }}>{found.typename}</h4>
+					<table style={{ width: '100%' }}>
+						<tbody>
+						{Object.entries(found.props).slice(0, 10).map(([k, v]) => (
+							<tr key={k}>
+								<td style={{ paddingRight: 8, paddingBottom: 4 }}>
+									<strong>{k}</strong>
+								</td>
+								<td style={{ paddingBottom: 4 }}>{String(v)}</td>
+							</tr>
+						))}
+						</tbody>
+					</table>
+					<button
+						onClick={() => setFound(null)}
+						style={{
+							marginTop: 8,
+							padding: '4px 8px',
+							background: '#ff3b3b',
+							color: 'white',
+							border: 'none',
+							borderRadius: 4,
+							cursor: 'pointer'
+						}}
+					>
+						{t('close')}
+					</button>
+				</div>
+			)}
+		</div>
 	);
 }

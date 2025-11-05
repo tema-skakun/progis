@@ -4,13 +4,13 @@ import {useTranslation} from 'react-i18next';
 
 export type CRSCode = 'EPSG:3857' | 'EPSG:4326';
 
-const DEFAULT_CENTER_4326: [number, number] = [64.557973142, 39.825462946];
+const DEFAULT_CENTER: [number, number] = [39.825462946, 64.557973142]; // [lng, lat] для OpenLayers
 
 export default function App() {
 	const {i18n, t} = useTranslation();
 	const [crs, setCrs] = useState<CRSCode>('EPSG:3857');
 
-	const center = useMemo(() => DEFAULT_CENTER_4326, []);
+	const center = useMemo(() => DEFAULT_CENTER, []);
 
 	return (
 		<div style={{height: '100vh', display: 'flex', flexDirection: 'column'}}>
@@ -23,7 +23,7 @@ export default function App() {
 					alignItems: 'center',
 				}}
 			>
-				<strong>Leaflet WMS/WFS/ZWS</strong>
+				<strong>OpenLayers WMS/WFS/ZWS</strong>
 				<label>
 					{t('crs')}:&nbsp;
 					<select value={crs} onChange={(e) => setCrs(e.target.value as CRSCode)}>
