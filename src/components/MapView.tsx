@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from 'react';
 import { View } from 'ol';
-import { fromLonLat, toLonLat } from 'ol/proj';
+import { fromLonLat } from 'ol/proj';
 import { defaults as defaultControls } from 'ol/control';
 import { defaults as defaultInteractions } from 'ol/interaction';
 import TileLayer from 'ol/layer/Tile';
@@ -12,8 +12,7 @@ import { Point } from 'ol/geom';
 import { Style, Circle, Fill, Stroke } from 'ol/style';
 import { Feature } from 'ol';
 import OLMap from './OLMap';
-import { WMS_URL, OGC_PREFIX, buildGetFeatureInfoUrl, fetchWfsFeatureById, fetchWfsFirstInBBox } from '../services/ogc';
-import { parseFeatureInfoXml } from '../utils/xml';
+import { WMS_URL, OGC_PREFIX } from '../services/ogc';
 import { toast } from 'react-toastify';
 import { useTranslation } from 'react-i18next';
 import { CRSCode } from '../App';
@@ -192,7 +191,7 @@ export default function MapView({
 		controls: defaultControls({
 			zoom: true,
 			rotate: true,
-			attribution: true
+			attribution: false
 		}),
 		interactions: defaultInteractions({
 			pinchRotate: true,
