@@ -18,14 +18,22 @@ export default function ZwsLayerSelect({value, onChange, disabled}: {
 	}, []);
 
 	return (
-		<label style={{display: 'flex', flexDirection: 'column', gap: 4}}>
-			<span>{t('zwsLayer')}</span>
-			<select value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled}>
-				{layers.length === 0 && <option value="example:demo">example:demo</option>}
-				{layers.map((l) => (
-					<option key={l.name} value={l.name}>{l.title || l.name}</option>
-				))}
-			</select>
-		</label>
+		<select
+			value={value}
+			onChange={(e) => onChange(e.target.value)}
+			disabled={disabled}
+			style={{
+				padding: '4px 8px',
+				borderRadius: '4px',
+				border: '1px solid #ccc',
+				background: '#fff',
+				minWidth: '150px'
+			}}
+		>
+			{layers.length === 0 && <option value="example:demo">example:demo</option>}
+			{layers.map((l) => (
+				<option key={l.name} value={l.name}>{l.title || l.name}</option>
+			))}
+		</select>
 	);
 }

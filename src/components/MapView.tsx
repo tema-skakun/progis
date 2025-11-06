@@ -1,33 +1,34 @@
-import { useMemo, useState, useCallback } from 'react';
-import { View } from 'ol';
-import { fromLonLat, toLonLat } from 'ol/proj';
-import { defaults as defaultControls } from 'ol/control';
-import { defaults as defaultInteractions } from 'ol/interaction';
-import { Vector as VectorSource } from 'ol/source';
-import { Style, Circle, Fill, Stroke } from 'ol/style';
+import {useMemo, useState, useCallback} from 'react';
+import {View} from 'ol';
+import {fromLonLat, toLonLat} from 'ol/proj';
+import {defaults as defaultControls} from 'ol/control';
+import {defaults as defaultInteractions} from 'ol/interaction';
+import {Vector as VectorSource} from 'ol/source';
+import {Style, Circle, Fill, Stroke} from 'ol/style';
 import OLMap from './OLMap';
-import { buildOlGetFeatureInfoUrl, fetchOlFeatureInfo } from '../services/olOgc';
-import { parseFeatureInfoXml } from '../utils/xml';
-import { toast } from 'react-toastify';
-import { useTranslation } from 'react-i18next';
-import { CRSCode } from '../App';
+import {buildOlGetFeatureInfoUrl, fetchOlFeatureInfo} from '../services/olOgc';
+import {parseFeatureInfoXml} from '../utils/xml';
+import {toast} from 'react-toastify';
+import {useTranslation} from 'react-i18next';
 import MapLayersManager from './MapLayersManager';
 import MapClickHandler from './MapClickHandler';
 import FeatureManager from './FeatureManager';
-import MapControls from './MapControls';
 import LoadingIndicator from './LoadingIndicator';
 import FeaturePopup from './FeaturePopup';
-import { FoundFeature } from '../types';
+import {CRSCode, FoundFeature} from '../types';
 
-const ZWS_DEFAULT_LAYER = 'example:demo';
-const WMS_DEFAULT_LAYERS = ['openlayers:teploset'];
+interface MapViewProps {
+	center: [number, number];
+	zoom: number;
+	crsCode: CRSCode;
+	zwsLayer: string;
+	wmsLayers: string[];
+}
 
 export default function MapView({
-																	center, zoom, crsCode,
-																}: { center: [number, number]; zoom: number; crsCode: CRSCode; }) {
-	const { t } = useTranslation();
-	const [zwsLayer, setZwsLayer] = useState<string>(ZWS_DEFAULT_LAYER);
-	const [wmsLayers, setWmsLayers] = useState<string[]>(WMS_DEFAULT_LAYERS);
+																	center, zoom, crsCode, zwsLayer, wmsLayers
+																}: MapViewProps) {
+	const {t} = useTranslation();
 	const [found, setFound] = useState<FoundFeature | null>(null);
 	const [currentMap, setCurrentMap] = useState<any>(null);
 	const [isLoading, setIsLoading] = useState(false);
@@ -41,8 +42,8 @@ export default function MapView({
 	const foundFeatureStyle = useMemo(() => new Style({
 		image: new Circle({
 			radius: 6,
-			fill: new Fill({ color: '#ff3b3b' }),
-			stroke: new Stroke({ color: '#fff', width: 2 })
+			fill: new Fill({color: '#ff3b3b'}),
+			stroke: new Stroke({color: '#fff', width: 2})
 		})
 	}), []);
 
@@ -116,10 +117,10 @@ export default function MapView({
 	}), [view]);
 
 	return (
-		<div style={{ height: '100%', width: '100%', position: 'relative' }}>
+		<div style={{height: '100%', width: '100%', position: 'relative'}}>
 			<OLMap
 				{...mapOptions}
-				style={{ height: '100%', width: '100%' }}
+				style={{height: '100%', width: '100%'}}
 				onMapReady={handleMapReady}
 			>
 				{currentMap && (
@@ -141,21 +142,14 @@ export default function MapView({
 				)}
 			</OLMap>
 
+			{/* УБИРАЕМ MapControls из карты */}
 			<FeatureManager
 				vectorSource={vectorSource}
 				foundFeature={found}
 				crsCode={crsCode}
 			/>
 
-			<LoadingIndicator isLoading={isLoading} />
-
-			<MapControls
-				zwsLayer={zwsLayer}
-				onZwsLayerChange={setZwsLayer}
-				wmsLayers={wmsLayers}
-				onWmsLayersChange={setWmsLayers}
-				crsCode={crsCode}
-			/>
+			<LoadingIndicator isLoading={isLoading}/>
 
 			{found && (
 				<FeaturePopup

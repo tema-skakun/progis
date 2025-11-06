@@ -9,5 +9,10 @@
   "featureInfo": "Feature information",
   "featureFound": "Feature found",
   "noFeatureFound": "No features found",
-  "loading": "Loading"
+  "loading": "Loading",
+  "selectLayers": "Select layers",
+  "layersSelected": "layers selected",
+  "selectAll": "All",
+  "selectNone": "None",
+  "holdCtrlToSelectMultiple": "Hold Ctrl to select multiple layers"
 }

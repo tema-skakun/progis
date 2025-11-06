@@ -9,5 +9,10 @@
   "featureInfo": "Информация об объекте",
   "featureFound": "Объект найден",
   "noFeatureFound": "Объекты не найдены",
-  "loading": "Загрузка"
+  "loading": "Загрузка",
+  "selectLayers": "Выберите слои",
+  "layersSelected": "слоев выбрано",
+  "selectAll": "Все",
+  "selectNone": "Ничего",
+  "holdCtrlToSelectMultiple": "Удерживайте Ctrl для выбора нескольких слоев"
 }
