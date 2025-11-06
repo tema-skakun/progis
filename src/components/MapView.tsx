@@ -113,8 +113,8 @@ export default function MapView({
 	const mapOptions = useMemo(() => ({
 		view: view,
 		controls: defaultControls({
-			zoom: true,
-			rotate: true,
+			zoom: false,
+			rotate: false,
 			attribution: false
 		}),
 		interactions: defaultInteractions({
