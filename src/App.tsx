@@ -1,8 +1,7 @@
 import {useState, useMemo} from 'react';
 import MapView from './components/MapView';
 import {useTranslation} from 'react-i18next';
-
-export type CRSCode = 'EPSG:3857' | 'EPSG:4326';
+import { CRSCode } from './types';
 
 const DEFAULT_CENTER: [number, number] = [39.825462946, 64.557973142]; // [lng, lat] для OpenLayers
 

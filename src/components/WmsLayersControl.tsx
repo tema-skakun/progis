@@ -18,7 +18,7 @@ export default function WmsLayersControl({value, onChange}: { value: string[]; o
 		} else {
 			onChange([...value, name]);
 		}
-		console.log('Selected layers:', value.includes(name) ? value.filter((x) => x !== name) : [...value, name]);
+		// console.log('Selected layers:', value.includes(name) ? value.filter((x) => x !== name) : [...value, name]);
 	}
 
 	return (
