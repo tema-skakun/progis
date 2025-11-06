@@ -14,5 +14,6 @@
   "layersSelected": "layers selected",
   "selectAll": "All",
   "selectNone": "None",
-  "holdCtrlToSelectMultiple": "Hold Ctrl to select multiple layers"
+  "holdCtrlToSelectMultiple": "Hold Ctrl to select multiple layers",
+  "4326Warning": "Only WMS layers are available in EPSG:4326. ZWS layers are not supported in this projection."
 }

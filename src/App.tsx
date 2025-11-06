@@ -1,4 +1,4 @@
-import {useState, useMemo} from 'react';
+import {useState, useMemo, useEffect} from 'react';
 import MapView from './components/MapView';
 import {useTranslation} from 'react-i18next';
 import {CRSCode} from './types';
@@ -12,11 +12,40 @@ export default function App() {
 	const [crs, setCrs] = useState<CRSCode>('EPSG:3857');
 	const [zwsLayer, setZwsLayer] = useState<string>('example:demo');
 	const [wmsLayers, setWmsLayers] = useState<string[]>(['openlayers:teploset']);
+	const [show4326Warning, setShow4326Warning] = useState(false);
 
 	const center = useMemo(() => DEFAULT_CENTER, []);
 
+// При смене CRS показываем предупреждение
+	useEffect(() => {
+		if (crs === 'EPSG:4326') {
+			setShow4326Warning(true);
+			// Автоматически скрываем через 5 секунд
+			const timer = setTimeout(() => setShow4326Warning(false), 5000);
+			return () => clearTimeout(timer);
+		}
+	}, [crs]);
+
 	return (
 		<div style={{height: '100vh', display: 'flex', flexDirection: 'column'}}>
+
+			{show4326Warning && (
+				<div style={{
+					position: 'absolute',
+					top: 60,
+					left: '50%',
+					transform: 'translateX(-50%)',
+					background: '#ffeb3b',
+					padding: '8px 16px',
+					borderRadius: '4px',
+					border: '1px solid #ffc107',
+					zIndex: 1000,
+					fontSize: '14px'
+				}}>
+					{t('4326Warning')}
+				</div>
+			)}
+
 			<header
 				style={{
 					padding: '8px 16px',

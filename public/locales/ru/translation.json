@@ -14,5 +14,6 @@
   "layersSelected": "слоев выбрано",
   "selectAll": "Все",
   "selectNone": "Ничего",
-  "holdCtrlToSelectMultiple": "Удерживайте Ctrl для выбора нескольких слоев"
+  "holdCtrlToSelectMultiple": "Удерживайте Ctrl для выбора нескольких слоев",
+  "4326Warning": "В EPSG:4326 доступны только WMS слои. ZWS слои не поддерживаются в этой проекции."
 }

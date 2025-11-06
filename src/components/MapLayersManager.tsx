@@ -19,45 +19,70 @@ export default function MapLayersManager({
 	const layers = useMemo(() => {
 		const baseLayers = [];
 
-		// Базовые слои для обеих СК
 		if (crsCode === 'EPSG:3857') {
+			// Для Web Mercator - используем OSM + ZWS тайлы
 			baseLayers.push(new TileLayer({source: new OSM(), zIndex: 1}));
+
+			if (zwsLayer) {
+				baseLayers.push(
+					new TileLayer({
+						source: new TileWMS({
+							url: `/ogc/zws/GetLayerTile`,
+							params: {'Layer': zwsLayer, 'SRS': 'EPSG:3857'},
+						}),
+						zIndex: 2
+					})
+				);
+			}
 		} else {
+			// Для EPSG:4326 используем ТОЛЬКО WMS слои - ZWS НЕ ПОДДЕРЖИВАЕТ 4326!
+			const baseParams = {
+				'FORMAT': 'image/png',
+				'TRANSPARENT': 'true',
+				'SRS': 'EPSG:4326'
+			};
+
+			// Базовый слой региона
 			baseLayers.push(
 				new ImageLayer({
 					source: new ImageWMS({
 						url: '/ogc/ws',
-						params: {'LAYERS': 'mo:region', 'FORMAT': 'image/jpeg', 'SRS': 'EPSG:4326'},
+						params: {
+							...baseParams,
+							'LAYERS': 'mo:region'
+						},
 						ratio: 1
 					}),
 					zIndex: 1
 				})
 			);
+
+			// В EPSG:4326 НЕ используем ZWS слои - они не поддерживают эту проекцию
+			// ZWS слой просто игнорируем для EPSG:4326
+			console.warn('ZWS layers are not supported in EPSG:4326. Using only WMS layers.');
 		}
 
-		// ZWS слой доступен для всех СК
-		if (zwsLayer) {
-			baseLayers.push(
-				new TileLayer({
+		// WMS слои коммуникаций
+		const wmsLayersArray = wmsLayers.map(layer => {
+			if (crsCode === 'EPSG:3857') {
+				return new TileLayer({
 					source: new TileWMS({
-						url: `/ogc/zws/GetLayerTile`,
-						params: {'Layer': zwsLayer, 'SRS': crsCode},
+						url: '/ogc/ws',
+						params: {'LAYERS': layer, 'FORMAT': 'image/png', 'TRANSPARENT': 'true', 'SRS': 'EPSG:3857'},
 					}),
-					zIndex: 2
-				})
-			);
-		}
-
-		const wmsLayersArray = wmsLayers.map(layer =>
-			new ImageLayer({
-				source: new ImageWMS({
-					url: '/ogc/ws',
-					params: {'LAYERS': layer, 'FORMAT': 'image/png', 'TRANSPARENT': 'true', 'SRS': crsCode},
-					ratio: 1
-				}),
-				zIndex: 3
-			})
-		);
+					zIndex: 3
+				});
+			} else {
+				return new ImageLayer({
+					source: new ImageWMS({
+						url: '/ogc/ws',
+						params: {'LAYERS': layer, 'FORMAT': 'image/png', 'TRANSPARENT': 'true', 'SRS': 'EPSG:4326'},
+						ratio: 1
+					}),
+					zIndex: 3
+				});
+			}
+		});
 
 		const vectorLayer = new VectorLayer({
 			source: vectorSource,
@@ -70,7 +95,23 @@ export default function MapLayersManager({
 	useEffect(() => {
 		if (!map) return;
 
-		map.setLayers(layers);
+		// ВАЖНО: Не очищаем все слои, а обновляем существующие
+		// Это предотвращает проблемы с пересозданием карты
+		const currentLayers = map.getLayers();
+
+		// Удаляем только старые слои, которые мы управляем
+		const layersToRemove = currentLayers.getArray().filter(layer =>
+			layer.get('managed') === true
+		);
+
+		layersToRemove.forEach(layer => currentLayers.remove(layer));
+
+		// Добавляем новые слои с пометкой managed
+		layers.forEach(layer => {
+			layer.set('managed', true);
+			map.addLayer(layer);
+		});
+
 	}, [map, layers]);
 
 	return null;

@@ -97,11 +97,18 @@ export default function MapView({
 		setIsLoading(false);
 	}, [currentMap, isLoading, wmsLayers, crsCode, t]);
 
-	const view = useMemo(() => new View({
-		center: centerProjected,
-		zoom: zoom,
-		projection: crsCode
-	}), [centerProjected, zoom, crsCode]);
+	const view = useMemo(() => {
+		// При смене проекции сбрасываем zoom для предотвращения искажений
+		const adjustedZoom = crsCode === 'EPSG:4326' ? Math.min(zoom, 10) : zoom;
+
+		return new View({
+			center: centerProjected,
+			zoom: adjustedZoom,
+			projection: crsCode,
+			extent: crsCode === 'EPSG:4326' ? [-180, -90, 180, 90] : undefined,
+			maxZoom: crsCode === 'EPSG:4326' ? 12 : 22
+		});
+	}, [centerProjected, zoom, crsCode]);
 
 	const mapOptions = useMemo(() => ({
 		view: view,
@@ -142,7 +149,6 @@ export default function MapView({
 				)}
 			</OLMap>
 
-			{/* УБИРАЕМ MapControls из карты */}
 			<FeatureManager
 				vectorSource={vectorSource}
 				foundFeature={found}
