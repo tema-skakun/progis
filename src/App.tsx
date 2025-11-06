@@ -27,7 +27,7 @@ export default function App() {
 	}, [crs]);
 
 	return (
-		<div style={{height: '100vh', display: 'flex', flexDirection: 'column'}}>
+		<div style={{height: '98dvh', display: 'flex', flexDirection: 'column', overflow: 'hidden'}}>
 
 			{show4326Warning && (
 				<div style={{
