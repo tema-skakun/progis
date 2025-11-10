@@ -65,20 +65,6 @@ export async function fetchZwsLayerList() {
 	return [{ name: 'example:demo', title: 'example:demo' }];
 }
 
-export async function fetchWfsFeatureById({typename, fid}: {
-	typename: string; fid?: string; srs: 'EPSG:3857' | 'EPSG:4326';
-}) {
-	try {
-		const q = new URLSearchParams({service: 'WFS', version: '1.1.0', request: 'GetFeature', typeName: typename});
-		if (fid) q.set('featureId', fid);
-		const res = await fetch(`${WFS_URL}?${q.toString()}`);
-		const xml = await res.text();
-		return parseWfsGmlPointFeature(xml);
-	} catch {
-		return undefined;
-	}
-}
-
 export async function fetchWfsFirstInBBox({latlng, srs, typeNames}: {
 	map: L.Map; latlng: L.LatLng; srs: 'EPSG:3857' | 'EPSG:4326'; typeNames: string[];
 }) {
