@@ -1,7 +1,9 @@
 import {Map} from 'ol';
 import {Coordinate} from 'ol/coordinate';
-import {OGC_PREFIX} from './ogc';
 import {toQuery} from "./wms11";
+
+export const OGC_PREFIX = '/ogc';
+export const ZWS_URL = `${OGC_PREFIX}/zws`;
 
 export function buildOlGetFeatureInfoUrl({
 																					 map,
@@ -82,4 +84,59 @@ export async function fetchOlFeatureInfo(url: string, signal?: AbortSignal): Pro
 	}
 
 	return text;
+}
+
+export async function fetchZwsLayerList() {
+	// 1) REST-вариант
+	try {
+		const res = await fetch(`${ZWS_URL}/GetLayerList`, { method: 'GET', headers: { Accept: 'text/xml' } });
+		const txt = await res.text();
+		if (res.ok && /<GetLayerList>/i.test(txt)) {
+			const doc = new DOMParser().parseFromString(txt, 'text/xml');
+			const layers = Array.from(doc.getElementsByTagName('Layer')).map(n => ({
+				name: n.getElementsByTagName('Name')[0]?.textContent || '',
+				title: n.getElementsByTagName('Title')[0]?.textContent || ''
+			})).filter(l => l.name);
+			if (layers.length) return layers;
+		}
+	} catch (error) {
+		console.debug('Fetch error:', error);
+	}
+	// 2) POST с XML-командой
+	try {
+		const body = `<?xml version="1.0" encoding="UTF-8"?><zwsRequest><GetLayerList/></zwsRequest>`;
+		const res = await fetch(ZWS_URL, {
+			method: 'POST',
+			headers: { 'Content-Type': 'text/xml', 'SOAPAction': 'GetLayerList' },
+			body
+		});
+		const txt = await res.text();
+		if (res.ok && /<GetLayerList>/i.test(txt)) {
+			const doc = new DOMParser().parseFromString(txt, 'text/xml');
+			const layers = Array.from(doc.getElementsByTagName('Layer')).map(n => ({
+				name: n.getElementsByTagName('Name')[0]?.textContent || '',
+				title: n.getElementsByTagName('Title')[0]?.textContent || ''
+			})).filter(l => l.name);
+			if (layers.length) return layers;
+		}
+	} catch (error) {
+		console.debug('Fetch error:', error);
+	}
+	// 3) GET c query-параметром
+	try {
+		const res = await fetch(`${ZWS_URL}?Action=GetLayerList`);
+		const txt = await res.text();
+		if (res.ok && /<GetLayerList>/i.test(txt)) {
+			const doc = new DOMParser().parseFromString(txt, 'text/xml');
+			const layers = Array.from(doc.getElementsByTagName('Layer')).map(n => ({
+				name: n.getElementsByTagName('Name')[0]?.textContent || '',
+				title: n.getElementsByTagName('Title')[0]?.textContent || ''
+			})).filter(l => l.name);
+			if (layers.length) return layers;
+		}
+	} catch (error) {
+		console.debug('Fetch error:', error);
+	}
+	// fallback
+	return [{ name: 'example:demo', title: 'example:demo' }];
 }

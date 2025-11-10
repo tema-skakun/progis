@@ -1,5 +1,5 @@
 import {useEffect, useState} from 'react';
-import {fetchZwsLayerList} from '../services/ogc';
+import { fetchZwsLayerList } from '../services/olOgc';
 import {useTranslation} from 'react-i18next';
 
 export default function ZwsLayerSelect({value, onChange, disabled}: {
@@ -37,25 +37,3 @@ export default function ZwsLayerSelect({value, onChange, disabled}: {
 		</select>
 	);
 }
-
-// Добавьте эту функцию в services/ogc.ts
-export async function checkZwsLayerProjections(layerName: string): Promise<string[]> {
-	try {
-		const url = `${ZWS_URL}/GetLayerTile?Layer=${layerName}&REQUEST=GetCapabilities`;
-		const response = await fetch(url);
-		const text = await response.text();
-
-		// Простая проверка - ищем поддерживаемые SRS в ответе
-		const supportedProjections = [];
-		if (text.includes('EPSG:3857')) supportedProjections.push('EPSG:3857');
-		if (text.includes('EPSG:4326')) supportedProjections.push('EPSG:4326');
-		if (text.includes('CRS:84')) supportedProjections.push('CRS:84');
-
-		return supportedProjections.length > 0 ? supportedProjections : ['EPSG:3857']; // fallback
-	} catch (error) {
-		console.error('Error checking layer projections:', error);
-		return ['EPSG:3857']; // fallback
-	}
-}
-
-
