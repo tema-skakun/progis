@@ -3,7 +3,7 @@ import { Feature } from 'ol';
 import { Point } from 'ol/geom';
 import { VectorSource } from 'ol/source';
 import { fromLonLat } from 'ol/proj';
-import { FoundFeature } from './MapView';
+import type {FoundFeature} from "../types";
 
 interface FeatureManagerProps {
 	vectorSource: VectorSource;
