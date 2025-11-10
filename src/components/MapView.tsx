@@ -56,46 +56,40 @@ export default function MapView({
 
 	const handleMapClick = useCallback(async (coordinate: [number, number]) => {
 		if (!currentMap || isLoading || wmsLayers.length === 0) return;
-
 		setIsLoading(true);
 
-		for (const layer of wmsLayers) {
-			try {
-				const url = buildOlGetFeatureInfoUrl({
-					map: currentMap,
-					coordinate: coordinate,
-					srs: crsCode,
-					layers: [layer]
+		const controllers = wmsLayers.map(() => new AbortController());
+		try {
+			const tasks = wmsLayers.map((layer, i) => (async () => {
+				const url = buildOlGetFeatureInfoUrl({map: currentMap, coordinate, srs: crsCode, layers: [layer]});
+				const xml = await fetchOlFeatureInfo(url, controllers[i].signal);
+				return parseFeatureInfoXml(xml) ? {layer, xml} : null;
+			})());
+
+			const first = await Promise.any(tasks.map(p => p.then(v => {
+				if (!v) throw new Error();
+				return v;
+			})));
+			controllers.forEach(c => c.abort());
+			if (first) {
+				const lonLat = crsCode === 'EPSG:3857' ? toLonLat(coordinate) : coordinate;
+				setFound({
+					typename: parseFeatureInfoXml(first.xml)!.typename,
+					fid: parseFeatureInfoXml(first.xml)!.fid,
+					coordinate: lonLat as [number, number],
+					props: parseFeatureInfoXml(first.xml)!.props
 				});
-
-				const xmlResponse = await fetchOlFeatureInfo(url);
-				const featureInfo = parseFeatureInfoXml(xmlResponse);
-
-				if (featureInfo) {
-					const lonLatCoordinate = crsCode === 'EPSG:3857'
-						? toLonLat(coordinate)
-						: coordinate;
-
-					const foundFeature: FoundFeature = {
-						typename: featureInfo.typename,
-						fid: featureInfo.fid,
-						coordinate: lonLatCoordinate as [number, number],
-						props: featureInfo.props
-					};
-
-					setFound(foundFeature);
-					toast.success(t('featureFound'));
-					setIsLoading(false);
-					return;
-				}
-			} catch (err) {
-				console.warn(`Error with layer ${layer}:`, err);
+				toast.success(t('featureFound'));
+			} else {
+				setFound(null);
+				toast.info(t('noFeatureFound'));
 			}
+		} catch {
+			setFound(null);
+			toast.info(t('noFeatureFound'));
+		} finally {
+			setIsLoading(false);
 		}
-
-		setFound(null);
-		toast.info(t('noFeatureFound'));
-		setIsLoading(false);
 	}, [currentMap, isLoading, wmsLayers, crsCode, t]);
 
 	const view = useMemo(() => {

@@ -45,9 +45,8 @@ export function buildOlGetFeatureInfoUrl({
 	return url;
 }
 
-export async function fetchOlFeatureInfo(url: string): Promise<string> {
-	// console.log('Fetching from URL:', url);
-	const response = await fetch(url);
+export async function fetchOlFeatureInfo(url: string, signal?: AbortSignal): Promise<string> {
+	const response = await fetch(url, { signal });
 
 	if (!response.ok) {
 		throw new Error(`HTTP error! status: ${response.status}`);
