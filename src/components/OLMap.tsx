@@ -1,12 +1,13 @@
 import React, { ReactNode, useRef, useEffect, useState } from 'react';
 import { useMap } from '../hooks/useMap';
 import { MapOptions } from 'ol/Map';
+import type { Map } from 'ol'
 
 interface OLMapProps extends MapOptions {
 	children?: ReactNode;
 	className?: string;
 	style?: React.CSSProperties;
-	onMapReady?: (map: any) => void;
+	onMapReady?: (map: Map) => void;
 }
 
 export default function OLMap({ children, className, style, onMapReady, ...mapOptions }: OLMapProps) {

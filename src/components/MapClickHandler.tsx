@@ -1,7 +1,8 @@
 import { useEffect } from 'react';
+import type { Map } from 'ol'
 
 interface MapClickHandlerProps {
-	map: any;
+	map: Map;
 	onMapClick: (coordinate: [number, number]) => void;
 	isLoading: boolean;
 	wmsLayers: string[];

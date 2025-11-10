@@ -4,9 +4,10 @@ import ImageLayer from 'ol/layer/Image';
 import VectorLayer from 'ol/layer/Vector';
 import {OSM, TileWMS, ImageWMS} from 'ol/source';
 import {Vector as VectorSource} from 'ol/source';
+import type { Map } from 'ol'
 
 interface MapLayersManagerProps {
-	map: any;
+	map: Map;
 	crsCode: string;
 	zwsLayer: string;
 	wmsLayers: string[];

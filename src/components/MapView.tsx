@@ -16,6 +16,7 @@ import FeatureManager from './FeatureManager';
 import LoadingIndicator from './LoadingIndicator';
 import FeaturePopup from './FeaturePopup';
 import {CRSCode, FoundFeature} from '../types';
+import type { Map } from 'ol'
 
 interface MapViewProps {
 	center: [number, number];
@@ -49,7 +50,7 @@ export default function MapView({
 
 	const vectorSource = useMemo(() => new VectorSource(), []);
 
-	const handleMapReady = useCallback((map: any) => {
+	const handleMapReady = useCallback((map: Map) => {
 		setCurrentMap(map);
 	}, []);
 
