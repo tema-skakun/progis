@@ -1,6 +1,7 @@
 import {Map} from 'ol';
 import {Coordinate} from 'ol/coordinate';
 import {OGC_PREFIX} from './ogc';
+import {toQuery} from "./wms11";
 
 export function buildOlGetFeatureInfoUrl({
 																					 map,
@@ -22,27 +23,26 @@ export function buildOlGetFeatureInfoUrl({
 	// Получаем extent карты
 	const extent = view.calculateExtent(size);
 
-	const params: Record<string, string> = {
-		service: 'WMS',
-		version: '1.1.1',
-		request: 'GetFeatureInfo',
-		layers: layers.join(','),
-		query_layers: layers.join(','),
-		styles: '',
-		srs: srs,
-		bbox: extent.join(','),
-		width: String(size[0]),
-		height: String(size[1]),
-		x: String(Math.round(pixel[0])),
-		y: String(Math.round(pixel[1])),
-		info_format: 'application/vnd.ogc.gml',
-		feature_count: '10'
-	};
+	const params = {
+		SERVICE: 'WMS',
+		VERSION: '1.1.1',
+		REQUEST: 'GetFeatureInfo',
+		LAYERS: layers.join(','),
+		QUERY_LAYERS: layers.join(','),
+		STYLES: '',
+		SRS: srs,
+		BBOX: extent.join(','),
+		WIDTH: String(size[0]),
+		HEIGHT: String(size[1]),
+		X: String(Math.round(pixel[0])),
+		Y: String(Math.round(pixel[1])),
+		INFO_FORMAT: 'application/vnd.ogc.gml',
+		FEATURE_COUNT: '10',
+		TRANSPARENT: 'true',
+		FORMAT: 'image/png',
+	} as const;
 
-	const url = `${OGC_PREFIX}/ws?${new URLSearchParams(params).toString()}`;
-	// console.log('Built GetFeatureInfo URL:', url);
-
-	return url;
+	return `${OGC_PREFIX}/ws?${toQuery(params)}`;
 }
 
 export async function fetchOlFeatureInfo(url: string, signal?: AbortSignal): Promise<string> {

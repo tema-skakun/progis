@@ -2,32 +2,12 @@ import L from 'leaflet';
 import {parseWfsGmlPointFeature} from '../utils/xml';
 
 export const OGC_PREFIX = '/ogc';
-export const WMS_URL = `${OGC_PREFIX}/ws`;
 export const WFS_URL = `${OGC_PREFIX}/ws`;
 export const ZWS_URL = `${OGC_PREFIX}/zws`;
 
 // в браузере не шлём Authorization — добавляет прокси
 export function getAuthHeader() {
 	return {};
-}
-
-export function buildGetFeatureInfoUrl({map, latlng, srs, layers}: {
-	map: L.Map; latlng: L.LatLng; srs: 'EPSG:3857' | 'EPSG:4326'; layers: string[];
-}) {
-	const size = map.getSize();
-	const b = map.getBounds();
-	const sw = b.getSouthWest();
-	const ne = b.getNorthEast();
-	const params: Record<string, string> = {
-		service: 'WMS', version: '1.1.1', request: 'GetFeatureInfo',
-		layers: layers.join(','), query_layers: layers.join(','), styles: '',
-		srs, bbox: `${sw.lng},${sw.lat},${ne.lng},${ne.lat}`,
-		width: String(size.x), height: String(size.y),
-		x: String(Math.round(map.latLngToContainerPoint(latlng).x)),
-		y: String(Math.round(map.latLngToContainerPoint(latlng).y)),
-		info_format: 'application/vnd.ogc.gml', feature_count: '1'
-	};
-	return `${WMS_URL}?${new URLSearchParams(params).toString()}`;
 }
 
 export async function fetchZwsLayerList() {
