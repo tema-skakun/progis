@@ -39,15 +39,6 @@ export default function MapView({
 		[center, crsCode]
 	);
 
-	// Стиль и источник для найденных объектов
-	const foundFeatureStyle = useMemo(() => new Style({
-		image: new Circle({
-			radius: 6,
-			fill: new Fill({color: '#ff3b3b'}),
-			stroke: new Stroke({color: '#fff', width: 2})
-		})
-	}), []);
-
 	const vectorSource = useMemo(() => new VectorSource(), []);
 
 	const handleMapReady = useCallback((map: Map) => {
