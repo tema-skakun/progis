@@ -7,8 +7,10 @@ import App from './App';
 
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
-	<React.StrictMode>
-		<App/>
-		<ToastContainer position="top-right" autoClose={4000} newestOnTop closeOnClick/>
-	</React.StrictMode>
+	<>
+		<React.StrictMode>
+			<App/>
+		</React.StrictMode>
+		<ToastContainer position="top-right" autoClose={2000} newestOnTop closeOnClick/>
+	</>
 );
